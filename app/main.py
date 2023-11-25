@@ -15,14 +15,13 @@ from .wrappers import ResizeObservation, SkipFrame
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 
 device = verify_device()
-device = "cpu"
 torch.set_default_device(device)
 
 
 def main():
     # Initialize Super Mario environment
     env = gym_super_mario_bros.make(
-        "SuperMarioBros-1-1-v0", render_mode="rgb", apply_api_compatibility=True
+        "SuperMarioBros-1-1-v0", render_mode="human", apply_api_compatibility=True
     )
 
     # Limit the action-space to
@@ -64,7 +63,7 @@ def main():
         # Play the game!
         while True:
             # 3. Show environment (the visual) [WIP]
-            # env.render()
+            env.render()
 
             # 4. Run agent on the state
             action = mario.act(current_state)

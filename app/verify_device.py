@@ -3,7 +3,7 @@ import logging
 import platform
 
 
-def verify_device() -> None:
+def verify_device() -> str:
     if torch.backends.mps.is_available():
         logging.info("Running on MPS")
         return "mps"

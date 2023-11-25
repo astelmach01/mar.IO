@@ -22,7 +22,7 @@ class Mario:
         self.learning_rate = 0.00025
 
         self.curr_step = 0
-        self.burnin = self.batch_size  # min. experiences before training
+        self.burnin = 5000  # min. experiences before training
         self.learn_every = 3  # no. of experiences between updates to Q_online
         self.sync_every = 1e4  # no. of experiences between Q_target & Q_online sync
 
@@ -34,7 +34,7 @@ class Mario:
         if self.use_cuda:
             torch.set_default_device(self.device)
 
-        self.net = MarioNet(self.state_dim, self.action_dim).float()
+        self.net = MarioNet(self.state_dim, self.action_dim, device)
         if self.use_cuda:
             self.net = self.net.to(device=self.device)
         if checkpoint:
@@ -58,7 +58,7 @@ class Mario:
 
         # take optimal action
         else:
-            state = torch.FloatTensor(state)
+            state = torch.FloatTensor(np.array(state))
             state = state.unsqueeze(0)
             action_values = self.net(state, model="online")
             action_idx = torch.argmax(action_values, axis=1).item()
@@ -107,8 +107,6 @@ class Mario:
         return state, next_state, action.squeeze(), reward.squeeze(), done.squeeze()
 
     def td_estimate(self, state, action):
-        print(type(state))
-        print(state.shape)
         current_Q = self.net(state, model="online")[
             np.arange(0, self.batch_size), action
         ]  # Q_online(s,a)
@@ -116,6 +114,12 @@ class Mario:
 
     @torch.no_grad()
     def td_target(self, reward, next_state, done):
+        next_state = next_state.to(
+            self.device
+        )  # ensure next_state tensor is on the correct device
+        reward = reward.to(self.device)  # ensure reward tensor is on the correct device
+        done = done.to(self.device)  # ensure done tensor is on the correct device
+
         next_state_Q = self.net(next_state, model="online")
         best_action = torch.argmax(next_state_Q, axis=1)
         next_Q = self.net(next_state, model="target")[
@@ -125,9 +129,11 @@ class Mario:
 
     def update_Q_online(self, td_estimate, td_target):
         loss = self.loss_fn(td_estimate, td_target)
+
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
         return loss.item()
 
     def sync_Q_target(self):
@@ -148,8 +154,6 @@ class Mario:
 
         # Sample from memory
         state, next_state, action, reward, done = self.recall()
-        
-        print(state.device)
 
         # Get TD Estimate
         td_est = self.td_estimate(state, action)

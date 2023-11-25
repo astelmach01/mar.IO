@@ -3,6 +3,8 @@
 
 .ruff_cache
 
+checkpoints
+
 # ignore session_name.session
 *.session
 *.session-journal
