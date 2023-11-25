@@ -1,5 +1,12 @@
 python-dotenv
 ruff
+mypy
 
-
-rich-click
+torch
+torchrl
+torchvision
+tensordict
+gym-super-mario-bros
+matplotlib
+scikit-image
+opencv-python
