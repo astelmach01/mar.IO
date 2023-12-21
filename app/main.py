@@ -17,11 +17,17 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 device = verify_device()
 torch.set_default_device(device)
 
+SHOULD_RENDER = False
+
+CHECKPOINTS_DIR = Path("./checkpoints").resolve()
+
 
 def main():
     # Initialize Super Mario environment
     env = gym_super_mario_bros.make(
-        "SuperMarioBros-1-1-v0", render_mode="human", apply_api_compatibility=True
+        "SuperMarioBros-1-1-v0",
+        render_mode="rgb" if not SHOULD_RENDER else "human",
+        apply_api_compatibility=True,
     )
 
     # Limit the action-space to
@@ -43,12 +49,14 @@ def main():
     )
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    checkpoint = None  # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
+    checkpoint = (
+        CHECKPOINTS_DIR / "2023-11-30T22-29-08" / "mario_net_5.chkpt"
+    )  # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
     mario = Mario(
         state_dim=(4, 84, 84),
         action_dim=env.action_space.n,
         save_dir=save_dir,
-        device=verify_device(),
+        device=device,
         checkpoint=checkpoint,
     )
 
@@ -63,7 +71,8 @@ def main():
         # Play the game!
         while True:
             # 3. Show environment (the visual) [WIP]
-            env.render()
+            if SHOULD_RENDER:
+                env.render()
 
             # 4. Run agent on the state
             action = mario.act(current_state)

@@ -12,7 +12,7 @@ class Mario:
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory = deque(maxlen=100000)
-        self.batch_size = 32
+        self.batch_size = 64
 
         self.exploration_rate = 1
         self.exploration_rate_decay = 0.99999975
@@ -180,7 +180,7 @@ class Mario:
         if not load_path.exists():
             raise ValueError(f"{load_path} does not exist")
 
-        ckp = torch.load(load_path, map_location=("cuda" if self.use_cuda else "cpu"))
+        ckp = torch.load(load_path, map_location=(self.device if self.use_cuda else "cpu"))
         exploration_rate = ckp.get("exploration_rate")
         state_dict = ckp.get("model")
 
