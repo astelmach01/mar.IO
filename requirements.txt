@@ -108,16 +108,12 @@ tensordict==0.2.1
     #   torchrl
 tifffile==2023.9.26
     # via scikit-image
-torch==2.1.1
+
     # via
     #   -r requirements.in
     #   tensordict
     #   torchrl
     #   torchvision
-torchrl==0.2.1
-    # via -r requirements.in
-torchvision==0.16.1
-    # via -r requirements.in
 tqdm==4.66.1
     # via nes-py
 typing-extensions==4.8.0

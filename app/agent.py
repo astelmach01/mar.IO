@@ -1,14 +1,13 @@
 import torch
 import random
 import numpy as np
-from .neural_net import MarioNet
 from collections import deque
 
 RANDOM_STATE = 2023
 
 
-class Mario:
-    def __init__(self, state_dim, action_dim, save_dir, device, checkpoint=None):
+class DiscreteAgent:
+    def __init__(self, state_dim, action_dim, net, save_dir, device, checkpoint=None):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.memory = deque(maxlen=100000)
@@ -34,7 +33,7 @@ class Mario:
         if self.use_cuda:
             torch.set_default_device(self.device)
 
-        self.net = MarioNet(self.state_dim, self.action_dim, device)
+        self.net = net 
         if self.use_cuda:
             self.net = self.net.to(device=self.device)
         if checkpoint:
@@ -168,19 +167,21 @@ class Mario:
 
     def save(self):
         save_path = (
-            self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt"
+            self.save_dir / f"net_{int(self.curr_step // self.save_every)}.chkpt"
         )
         torch.save(
             dict(model=self.net.state_dict(), exploration_rate=self.exploration_rate),
             save_path,
         )
-        print(f"MarioNet saved to {save_path} at step {self.curr_step}")
+        print(f"Net saved to {save_path} at step {self.curr_step}")
 
     def load(self, load_path):
         if not load_path.exists():
             raise ValueError(f"{load_path} does not exist")
 
-        ckp = torch.load(load_path, map_location=(self.device if self.use_cuda else "cpu"))
+        ckp = torch.load(
+            load_path, map_location=(self.device if self.use_cuda else "cpu")
+        )
         exploration_rate = ckp.get("exploration_rate")
         state_dict = ckp.get("model")
 

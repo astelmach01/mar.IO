@@ -6,7 +6,7 @@ from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
 from metrics import MetricLogger
-from agent import Mario
+from agent import DiscreteAgent
 from wrappers import ResizeObservation, SkipFrame
 
 env = gym_super_mario_bros.make(
@@ -28,7 +28,7 @@ save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%
 save_dir.mkdir(parents=True)
 
 checkpoint = Path("checkpoints/2020-10-21T18-25-27/mario.chkpt")
-mario = Mario(
+mario = DiscreteAgent(
     state_dim=(4, 84, 84),
     action_dim=env.action_space.n,
     save_dir=save_dir,

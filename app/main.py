@@ -3,26 +3,29 @@ import os
 from pathlib import Path
 
 import gym_super_mario_bros
+import gymnasium as gym
 import torch
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
-from .agent import Mario
+from .agent import DiscreteAgent
 from .metrics import MetricLogger
 from .verify_device import verify_device
 from .wrappers import ResizeObservation, SkipFrame
+from .neural_net import ConvNet, FeedForwardNet
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "True"
 
 device = verify_device()
 torch.set_default_device(device)
 
-SHOULD_RENDER = False
+SHOULD_RENDER = True
+NUM_EPISODES = 40000
 
 CHECKPOINTS_DIR = Path("./checkpoints").resolve()
 
 
-def main():
+def get_mario_environment():
     # Initialize Super Mario environment
     env = gym_super_mario_bros.make(
         "SuperMarioBros-1-1-v0",
@@ -44,6 +47,10 @@ def main():
 
     env.reset()
 
+    return env
+
+
+def get_mario_agent(action_dim: int):
     save_dir = Path("./checkpoints") / datetime.datetime.now().strftime(
         "%Y-%m-%dT%H-%M-%S"
     )
@@ -51,20 +58,49 @@ def main():
 
     checkpoint = (
         CHECKPOINTS_DIR / "2023-11-30T22-29-08" / "mario_net_5.chkpt"
-    )  # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
-    mario = Mario(
+    ) 
+    mario = DiscreteAgent(
         state_dim=(4, 84, 84),
-        action_dim=env.action_space.n,
+        action_dim=action_dim,
+        net=ConvNet((4,84,84), action_dim, device),
         save_dir=save_dir,
         device=device,
         checkpoint=checkpoint,
     )
 
-    logger = MetricLogger(save_dir)
+    return mario
 
-    episodes = 40000
 
-    ### for Loop that train the model num_episodes times by playing the game
+def setup_mario():
+    env = get_mario_environment()
+    agent = get_mario_agent(env.action_space.n)
+
+    return env, agent
+
+
+def get_frozen_lake_environment():
+    env = gym.make("FrozenLake-v1", desc=None, map_name="4x4", is_slippery=False, render_mode="human")
+
+    return env
+
+
+def setup_frozen_lake():
+    env = get_frozen_lake_environment()
+    
+    net = FeedForwardNet(env.observation_space.n, env.action_space.n, device)
+    agent = DiscreteAgent(
+        state_dim=env.observation_space.n,
+        action_dim=env.action_space.n,
+        net=net,
+        save_dir=None,
+        device=device,
+        checkpoint=None,
+    )
+
+    return env, agent
+
+
+def run_agent(env, agent, logger, episodes=NUM_EPISODES):
     for e in range(episodes):
         current_state, _ = env.reset()
 
@@ -75,17 +111,16 @@ def main():
                 env.render()
 
             # 4. Run agent on the state
-            action = mario.act(current_state)
+            action = agent.act(current_state)
 
             # 5. Agent performs action
             next_state, reward, done, trunc, info = env.step(action)
-            done = done or trunc
 
             # 6. Remember
-            mario.cache(current_state, next_state, action, reward, done)
+            agent.cache(current_state, next_state, action, reward, done)
 
             # 7. Learn
-            q, loss = mario.learn()
+            q, loss = agent.learn()
 
             # 8. Logging
             logger.log_step(reward, loss, q)
@@ -94,12 +129,25 @@ def main():
             current_state = next_state
 
             # 10. Check if end of game
-            if done or info["flag_get"]:
+            if done or ("flag_get" in info.keys() and info["flag_get"]):
                 break
 
         logger.log_episode()
 
         if e % 20 == 0:
             logger.record(
-                episode=e, epsilon=mario.exploration_rate, step=mario.curr_step
+                episode=e, epsilon=agent.exploration_rate, step=agent.curr_step
             )
+
+
+def main():
+    env, agent = setup_frozen_lake()
+    
+    save_dir = Path("./checkpoints") / datetime.datetime.now().strftime(
+        "%Y-%m-%dT%H-%M-%S"
+    )
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    logger = MetricLogger(save_dir)
+
+    run_agent(env, agent, logger)
